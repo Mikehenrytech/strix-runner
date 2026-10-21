@@ -3,6 +3,10 @@ name: Update APT Repository
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -19,13 +23,26 @@ jobs:
       - name: Install apt-utils
         run: sudo apt-get update && sudo apt-get install -y apt-utils
 
+      - name: Determine release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG=$(gh release view --repo "${{ github.repository }}" --json tagName -q '.tagName')
+          fi
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Using release tag: ${TAG}"
+
       - name: Download .deb from release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p pool/main/s/strix-runner
           rm -f pool/main/s/strix-runner/*.deb
-          gh release download "${{ github.event.release.tag_name }}" \
+          gh release download "${{ steps.release.outputs.TAG }}" \
             --repo "${{ github.repository }}" \
             --pattern "*.deb" \
             --dir pool/main/s/strix-runner/
