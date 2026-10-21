@@ -23,17 +23,17 @@ jobs:
         run: pip install pyinstaller
 
       - name: Build binary
-        run: pyinstaller --onefile --name strix-runner strix_runner.py
+        run: pyinstaller --onefile --name strix-runner-linux-x64 strix_runner.py
 
       - name: Generate checksum
         run: |
           cd dist
-          sha256sum strix-runner > strix-runner.sha256
+          sha256sum strix-runner-linux-x64 > strix-runner-linux-x64.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: strix-runner-binary
           path: |
-            dist/strix-runner
-            dist/strix-runner.sha256
+            dist/strix-runner-linux-x64
+            dist/strix-runner-linux-x64.sha256

@@ -37,7 +37,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./binary/strix-runner
-            ./binary/strix-runner.sha256
+            ./binary/strix-runner-linux-x64
+            ./binary/strix-runner-linux-x64.sha256
             ./deb/strix-runner_*.deb
             ./deb/strix-runner_*.deb.sha256
