@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-binary:
+    name: Build binary
+    uses: ./.github/workflows/build-binary.yml
+
+  build-deb:
+    name: Build .deb package
+    uses: ./.github/workflows/build-deb.yml
+
+  release:
+    name: Create GitHub Release
+    needs: [build-binary, build-deb]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: strix-runner-binary
+          path: ./binary
+
+      - name: Download deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: strix-runner-deb
+          path: ./deb
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./binary/strix-runner
+            ./binary/strix-runner.sha256
+            ./deb/strix-runner_*.deb
+            ./deb/strix-runner_*.deb.sha256

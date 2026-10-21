@@ -1,0 +1,2 @@
+#!/bin/sh
+exec python3 /usr/lib/strix-runner/strix_runner.py "$@"

@@ -1,0 +1,11 @@
+Package: strix-runner
+Version: {{VERSION}}
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.10)
+Maintainer: Mikehenrytech <12794741+Mikehenrytech@users.noreply.github.com>
+Description: Profile-based launcher for Strix pentests
+ Strix Runner is a profile-based CLI for launching authorized Strix
+ pentests. It stores global paths and named application profiles in JSON,
+ validates them, and runs Strix commands without invoking a shell.

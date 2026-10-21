@@ -1,0 +1,55 @@
+name: Build Debian Package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_call:
+
+jobs:
+  build:
+    name: Build .deb package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building version ${VERSION}"
+
+      - name: Build package structure
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          PKG_DIR="build/strix-runner_${VERSION}_amd64"
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/usr/bin"
+          mkdir -p "${PKG_DIR}/usr/lib/strix-runner"
+          cp strix_runner.py "${PKG_DIR}/usr/lib/strix-runner/"
+          cp packaging/deb/strix-runner "${PKG_DIR}/usr/bin/"
+          chmod +x "${PKG_DIR}/usr/bin/strix-runner"
+          sed "s/{{VERSION}}/${VERSION}/" packaging/deb/control > "${PKG_DIR}/DEBIAN/control"
+
+      - name: Build .deb
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: dpkg-deb --build "build/strix-runner_${VERSION}_amd64"
+
+      - name: Generate checksum
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          cd build
+          sha256sum "strix-runner_${VERSION}_amd64.deb" > "strix-runner_${VERSION}_amd64.deb.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-runner-deb
+          path: |
+            build/strix-runner_*.deb
+            build/strix-runner_*.deb.sha256
