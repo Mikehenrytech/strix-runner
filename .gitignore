@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Local configuration, secrets, and environment files
+.env
+.env.*
+config.json
+strix-config.json
+
+# Runtime output
+*.log
+logs/
+strix_runs/
+strix-runner.7z
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
