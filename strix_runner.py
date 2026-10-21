@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 
 
 DEFAULT_INSTRUCTION_FILE = "Instrucciones/Web_Application_Security_Assessment.md"
-DEFAULT_WORKSPACE_FILES = ["token.json", "testp_pass.txt", "mail_otp.py"]
+DEFAULT_WORKSPACE_FILES = ["token.json"]
 DEFAULT_SCAN_MODE = "deep"
 __version__ = "1.11.0"
 DEFAULT_LOG_DIR = (
