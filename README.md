@@ -28,6 +28,34 @@ Si el JSON se va a utilizar en otra máquina y solo desea comprobar su estructur
 python3 strix_runner.py verify --json-only
 ```
 
+## Instalación
+
+### Desde el repositorio APT (Ubuntu/Debian)
+
+Añade el repositorio e instala el paquete:
+
+```bash
+echo "deb [trusted=yes] https://mikehenrytech.github.io/strix-runner stable main" | sudo tee /etc/apt/sources.list.d/strix-runner.list
+sudo apt-get update
+sudo apt-get install strix-runner
+```
+
+### Desde el binario standalone
+
+Descarga el ejecutable desde la página de [releases](https://github.com/Mikehenrytech/strix-runner/releases):
+
+```bash
+wget https://github.com/Mikehenrytech/strix-runner/releases/latest/download/strix-runner-linux-x64
+chmod +x strix-runner-linux-x64
+sudo mv strix-runner-linux-x64 /usr/local/bin/strix-runner
+```
+
+### Desde el código fuente
+
+```bash
+python3 strix_runner.py --version
+```
+
 ## Inicio rápido
 
 ```bash

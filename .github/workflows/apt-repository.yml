@@ -1,0 +1,46 @@
+name: Update APT Repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-apt:
+    name: Update APT repository on GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install apt-utils
+        run: sudo apt-get update && sudo apt-get install -y apt-utils
+
+      - name: Download .deb from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p pool/main/s/strix-runner
+          rm -f pool/main/s/strix-runner/*.deb
+          gh release download "${{ github.event.release.tag_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.deb" \
+            --dir pool/main/s/strix-runner/
+
+      - name: Generate APT metadata
+        run: |
+          mkdir -p dists/stable/main/binary-amd64
+          apt-ftparchive packages pool/main > dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
+          apt-ftparchive release dists/stable > dists/stable/Release
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          exclude_assets: '.github,README.md,CHANGELOG.md,LICENSE,LICENSE-ADDENDUM.md,strix_runner.py,test_strix_runner.py,strix-config.example.json,additional-instruction.example.md,packaging'
