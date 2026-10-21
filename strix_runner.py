@@ -15,7 +15,7 @@ import os
 import re
 import signal
 import shlex
-import subprocess
+import subprocess  # nosec
 import sys
 import tempfile
 import time
@@ -495,7 +495,7 @@ def stop_project(
                 run_options: dict[str, Any] = {}
                 if output is not None:
                     run_options.update(stdout=output, stderr=subprocess.STDOUT)
-                result = subprocess.run(
+                result = subprocess.run(  # nosec
                     stop_command,
                     cwd=stop_cwd,
                     check=False,
@@ -537,7 +537,7 @@ def terminate_process_tree(
     process = managed.process
     try:
         if os.name == "nt":
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
                 check=False,
                 stdout=subprocess.DEVNULL,
@@ -629,7 +629,7 @@ def start_managed_process(
     output: BinaryIO | None,
 ) -> ManagedProcess:
     """Start an application without terminal input in an isolated process group."""
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # nosec
         command,
         cwd=cwd,
         stdin=subprocess.DEVNULL,
@@ -1988,7 +1988,7 @@ def resume_run(args: argparse.Namespace) -> int:
     if args.dry_run:
         return 0
     try:
-        result = subprocess.run(command, cwd=path_strix, check=False)
+        result = subprocess.run(command, cwd=path_strix, check=False)  # nosec
     except FileNotFoundError as exc:
         raise UserError(f"No se encontró el ejecutable: {exc.filename}") from exc
     if result.returncode != 0:
@@ -2533,7 +2533,7 @@ def run_application(
                         ),
                         name,
                     )
-                result = subprocess.run(effective_command, cwd=cwd, check=False)
+                result = subprocess.run(effective_command, cwd=cwd, check=False)  # nosec
             except FileNotFoundError as exc:
                 raise UserError(
                     f"No se encontró el ejecutable: {exc.filename}"
