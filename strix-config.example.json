@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "globals": {
+    "path_base": "/mnt/c/ruta/a/base",
+    "path_strix": "/mnt/c/ruta/al/proyecto/strix",
+    "log_dir": "~/.local/state/strix-runner/logs"
+  },
+  "applications": {
+    "aplicacion-remota": {
+      "url": "https://aplicacion-autorizada.example.test",
+      "instruction_file": "Instrucciones/Web_Application_Security_Assessment.md",
+      "additional_instruction_file": "Instrucciones/skill-audit.md",
+      "workspace_files": [
+        "token.json"
+      ],
+      "scan_mode": "deep"
+    },
+    "biblioteca-whitebox": {
+      "code_path": "github/biblioteca/code",
+      "instruction_file": "Instrucciones/Web_Application_Security_Assessment.md",
+      "workspace_files": [
+        "token.json"
+      ],
+      "scan_mode": "deep"
+    },
+    "aplicacion-local": {
+      "urls": [
+        "http://localhost:8080",
+        "http://localhost:8080/api"
+      ],
+      "code_paths": [
+        "github/aplicacion-local/frontend",
+        "github/aplicacion-local/backend"
+      ],
+      "instruction_file": "Instrucciones/Web_Application_Security_Assessment.md",
+      "workspace_files": [
+        "token.json"
+      ],
+      "scan_mode": "deep",
+      "extra_args": [
+        "--max-budget",
+        "20"
+      ],
+      "start_command": "docker compose up",
+      "start_wait_seconds": 8,
+      "stop_command": "docker compose down",
+      "stop_grace_seconds": 10,
+      "command_cwd": "github/aplicacion-local/backend"
+    }
+  }
+}
