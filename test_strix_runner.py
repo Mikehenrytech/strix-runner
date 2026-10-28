@@ -1280,6 +1280,13 @@ class StrixRunnerTests(unittest.TestCase):
             "not_observable",
         )
 
+    def test_history_run_dir_relative(self):
+        run_dir, _ = self.write_strix_run(targets=["https://example.test/app"])
+        runs = strix_runner.collect_history_runs(self.config, profile="app")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].run_dir, str(run_dir))
+        self.assertEqual(runs[0].run_dir_relative, "example-run")
+
     def test_history_filters_dates_and_marks_reconstructed_command(self):
         self.write_strix_run(targets=["https://example.test/app"])
 

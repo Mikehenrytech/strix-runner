@@ -129,6 +129,7 @@ class HistoryRun:
     run_id: str | None
     run_name: str
     run_dir: str
+    run_dir_relative: str
     profile: str | None
     profile_source: str
     profile_candidates: list[str]
@@ -1153,12 +1154,19 @@ def build_history_run(config: dict[str, Any], run_dir: Path) -> HistoryRun | Non
         except OSError:
             date_source = "not_observable"
     report_path = run_dir / "penetration_test_report.md"
+    _, path_strix = require_global_paths(config)
+    root = strix_runs_root(path_strix)
+    try:
+        run_dir_relative = str(run_dir.relative_to(root))
+    except ValueError:
+        run_dir_relative = run_dir.name
     return HistoryRun(
         selection_id=0,
         run_id=clean_terminal_text(record.get("run_id"), maximum=200) or None,
         run_name=clean_terminal_text(record.get("run_name"), maximum=200)
         or run_dir.name,
         run_dir=str(run_dir),
+        run_dir_relative=run_dir_relative,
         profile=profile,
         profile_source=profile_source,
         profile_candidates=profile_candidates,
@@ -1751,6 +1759,7 @@ def print_history_runs(runs: Sequence[HistoryRun], *, details: bool) -> None:
         if not details:
             continue
         print(f"  ID: {run.selection_id} | Run: {run.run_id or run.run_name}")
+        print(f"  Run Dir: {run.run_dir_relative}")
         print(
             f"  Asociaci�n: {run.profile_source} | "
             f"Comando: {run.command_source}"
@@ -1831,7 +1840,7 @@ function addField(parent,title,value){const box=el('div','box');box.append(el('h
 function renderRun(run){
   const details=el('details','run');const summary=el('summary');
   summary.append(el('strong','',`#${run.selection_id} - ${run.start_time||'Fecha no observable'}`),el('span','',run.profile||run.profile_candidates.join(', ')||'Sin asociar'),el('span','',run.status),el('span','optional',`${run.findings??'?'} hallazgos`),el('span','optional',`${run.agents.length} agentes`),el('span','optional',`${run.agents.reduce((n,a)=>n+a.skills.length,0)} skills`));details.append(summary);
-  const body=el('div','detail');const overview=el('div','grid');addField(overview,'Run',run.run_id||run.run_name);addField(overview,'Asociaci�n',run.profile_source);addField(overview,'Duraci�n',run.duration_seconds==null?'No observable':`${Math.round(run.duration_seconds)} s`);addField(overview,'Tokens',formatNumber(run.llm_usage.total_tokens));body.append(overview);
+  const body=el('div','detail');const overview=el('div','grid');addField(overview,'Run',run.run_id||run.run_name);addField(overview,'Run Dir',run.run_dir_relative);addField(overview,'Asociaci�n',run.profile_source);addField(overview,'Duraci�n',run.duration_seconds==null?'No observable':`${Math.round(run.duration_seconds)} s`);addField(overview,'Tokens',formatNumber(run.llm_usage.total_tokens));body.append(overview);
   const command=el('div','box');command.append(el('h3','',`Comando · ${run.command_source}`),el('pre','',run.command_display));if(run.command_gaps.length)command.append(el('div','muted',`No observable: ${run.command_gaps.join(', ')}`));body.append(command);
   if(run.report_uri){const report=el('a','', 'Abrir informe de penetraci�n');report.href=run.report_uri;report.rel='noopener';body.append(report)}
   const agents=el('div','grid');run.agents.forEach(agent=>{const box=el('section','box');box.append(el('h3','',`${agent.name}${agent.status?' · '+agent.status:''}`));if(agent.task)box.append(el('p','',agent.task));if(!agent.skills.length)box.append(el('span','muted','Sin skills registradas'));agent.skills.forEach(skill=>{const row=el('div');row.append(badge(`${skill.name}: ${skill.utility==='not_observable'?'No observable':skill.utility}`,skill.utility));if(skill.reason)row.append(el('span','muted',skill.reason));box.append(row)});agents.append(box)});body.append(agents);details.append(body);return details;
