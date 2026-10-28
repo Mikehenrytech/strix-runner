@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. This project follows semantic versioning.
 
+## 1.13.0
+
+- Add `dashboard` subcommand to launch `strix-runner-dashboard` when installed.
+- `strix-runner` now `Suggests: strix-runner-dashboard` in the Debian package.
+
 ## 1.12.0
 
 - Add `Run Dir` column to the compact history table (`history --all`).

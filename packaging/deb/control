@@ -4,6 +4,7 @@ Section: utils
 Priority: optional
 Architecture: amd64
 Depends: python3 (>= 3.10)
+Suggests: strix-runner-dashboard
 Maintainer: Mikehenrytech <12794741+Mikehenrytech@users.noreply.github.com>
 Description: Profile-based launcher for Strix pentests
  Strix Runner is a profile-based CLI for launching authorized Strix

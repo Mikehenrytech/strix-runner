@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import signal
 import shlex
 import subprocess  # nosec
@@ -30,7 +31,7 @@ from urllib.parse import urlparse
 DEFAULT_INSTRUCTION_FILE = "Instrucciones/Web_Application_Security_Assessment.md"
 DEFAULT_WORKSPACE_FILES = ["token.json"]
 DEFAULT_SCAN_MODE = "deep"
-__version__ = "1.12.0"
+__version__ = "1.13.0"
 DEFAULT_LOG_DIR = (
     Path(os.environ.get("XDG_STATE_HOME", "~/.local/state")).expanduser()
     / "strix-runner"
@@ -1998,6 +1999,39 @@ def resolve_resume_run(config: dict[str, Any], selector: str) -> HistoryRun:
     return run
 
 
+def run_dashboard(args: argparse.Namespace) -> int:
+    """Launch the optional strix-runner-dashboard if it is installed."""
+    dashboard = shutil.which("strix-dashboard")
+    if dashboard is None:
+        print(
+            "[dashboard] El dashboard no está instalado.",
+            file=sys.stderr,
+        )
+        print(
+            "[dashboard] Instálalo con: sudo apt-get install strix-runner-dashboard",
+            file=sys.stderr,
+        )
+        return 1
+
+    command = [
+        dashboard,
+        "--config",
+        str(args.config),
+        "--host",
+        args.host,
+        "--port",
+        str(args.port),
+    ]
+    url = f"http://{args.host}:{args.port}"
+    print(f"[dashboard] Dashboard disponible en {url}")
+    print("[dashboard] Pulsa Ctrl+C para detener.")
+    try:
+        subprocess.run(command, check=False)
+    except KeyboardInterrupt:
+        print("\n[dashboard] Detenido.")
+    return 0
+
+
 def resume_run(args: argparse.Namespace) -> int:
     """List resumable sessions or restore one through Strix's native CLI."""
     config = load_config(args.config)
@@ -2821,6 +2855,23 @@ Las rutas relativas se resuelven respecto a PATH_BASE.
         help="Genera un informe HTML standalone con permisos privados",
     )
     history_parser.set_defaults(handler=show_history)
+
+    dashboard_parser = subparsers.add_parser(
+        "dashboard",
+        help="Abre el dashboard web de historial (requiere strix-runner-dashboard)",
+    )
+    dashboard_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Dirección en la que escuchar (por defecto: 127.0.0.1)",
+    )
+    dashboard_parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Puerto en el que escuchar (por defecto: 8080)",
+    )
+    dashboard_parser.set_defaults(handler=run_dashboard)
 
     resume_parser = subparsers.add_parser(
         "resume",
