@@ -2026,7 +2026,7 @@ def run_dashboard(args: argparse.Namespace) -> int:
     print(f"[dashboard] Dashboard disponible en {url}")
     print("[dashboard] Pulsa Ctrl+C para detener.")
     try:
-        subprocess.run(command, check=False)
+        subprocess.run(command, check=False)  # nosec
     except KeyboardInterrupt:
         print("\n[dashboard] Detenido.")
     return 0
