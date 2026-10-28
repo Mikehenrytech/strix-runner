@@ -48,19 +48,42 @@ jobs:
           echo "PKG_DIR=${PKG_DIR}" >> "$GITHUB_OUTPUT"
           echo "Using release tag: ${TAG} from ${REPO}"
 
+      - name: Check if package is already published
+        id: check
+        run: |
+          set -e
+          pkg_dir="${{ steps.release.outputs.PKG_DIR }}"
+          tag="${{ steps.release.outputs.TAG }}"
+          version="${tag#v}"
+          pkg_name="$(basename "${pkg_dir}")"
+          packages_file="dists/stable/main/binary-amd64/Packages"
+          if [ -f "${packages_file}" ] && \
+             grep -A1 "^Package: ${pkg_name}$" "${packages_file}" | grep -q "^Version: ${version}$" && \
+             [ -n "$(find "${pkg_dir}" -maxdepth 1 -name '*.deb' -print -quit 2>/dev/null)" ]; then
+            echo "Package ${pkg_name} ${version} is already published. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download .deb from release
+        if: steps.check.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           mkdir -p "${{ steps.release.outputs.PKG_DIR }}"
           rm -f "${{ steps.release.outputs.PKG_DIR }}"/*.deb
           gh release download "${{ steps.release.outputs.TAG }}" \
             --repo "${{ steps.release.outputs.REPO }}" \
             --pattern "*.deb" \
+            --clobber \
             --dir "${{ steps.release.outputs.PKG_DIR }}/"
 
       - name: Generate APT metadata
+        if: steps.check.outputs.skip != 'true'
         run: |
+          set -e
           mkdir -p dists/stable/main/binary-amd64
           apt-ftparchive packages pool/main > dists/stable/main/binary-amd64/Packages
           gzip -k -f dists/stable/main/binary-amd64/Packages
