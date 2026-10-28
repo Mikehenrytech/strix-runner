@@ -45,6 +45,7 @@ class StrixRunnerTests(unittest.TestCase):
         targets=None,
         findings=None,
         executive_summary="Assessment completed successfully.",
+        models=None,
     ):
         run_dir = self.strix / "strix_runs" / run_name
         run_dir.mkdir(parents=True)
@@ -58,6 +59,13 @@ class StrixRunnerTests(unittest.TestCase):
                 for target in (targets or ["https://example.test/app"])
             ],
         }
+        if models:
+            record["llm_usage"] = {
+                "agents": [
+                    {"agent_name": f"agent-{i}", "model": model}
+                    for i, model in enumerate(models)
+                ]
+            }
         if executive_summary is not None:
             record["scan_results"] = {
                 "executive_summary": executive_summary,
@@ -1279,6 +1287,28 @@ class StrixRunnerTests(unittest.TestCase):
             run.agents[0].skills[1].utility,
             "not_observable",
         )
+
+    def test_history_run_dir_relative(self):
+        run_dir, _ = self.write_strix_run(targets=["https://example.test/app"])
+        runs = strix_runner.collect_history_runs(self.config, profile="app")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].run_dir, str(run_dir))
+        self.assertEqual(runs[0].run_dir_relative, "strix_runs/example-run")
+
+    def test_history_collects_models(self):
+        run_dir, _ = self.write_strix_run(
+            targets=["https://example.test/app"],
+            models=["openai/gpt-4o", "openai/gpt-4o-mini", "openai/gpt-4o"],
+        )
+        runs = strix_runner.collect_history_runs(self.config, profile="app")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].models, ["openai/gpt-4o", "openai/gpt-4o-mini"])
+
+    def test_history_models_empty_when_not_present(self):
+        run_dir, _ = self.write_strix_run(targets=["https://example.test/app"])
+        runs = strix_runner.collect_history_runs(self.config, profile="app")
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].models, [])
 
     def test_history_filters_dates_and_marks_reconstructed_command(self):
         self.write_strix_run(targets=["https://example.test/app"])

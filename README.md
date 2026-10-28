@@ -7,7 +7,7 @@ ejecutar escaneos autorizados de Strix. La URL se pasa como primer `--target` y,
 si se configura código local, este se pasa como un segundo `--target`, que es la
 forma soportada por Strix para combinar análisis black-box y white-box.
 
-Versión actual del runner: **1.11.0**. Puede consultarla desde la terminal con
+Versión actual del runner: **1.12.0**. Puede consultarla desde la terminal con
 cualquiera de estas formas:
 
 ```bash
