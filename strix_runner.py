@@ -130,6 +130,7 @@ class HistoryRun:
     run_name: str
     run_dir: str
     run_dir_relative: str
+    models: list[str]
     profile: str | None
     profile_source: str
     profile_candidates: list[str]
@@ -1159,6 +1160,13 @@ def build_history_run(config: dict[str, Any], run_dir: Path) -> HistoryRun | Non
         run_dir_relative = str(run_dir.relative_to(path_strix))
     except ValueError:
         run_dir_relative = run_dir.name
+    models: list[str] = []
+    llm_usage_record = record.get("llm_usage")
+    if isinstance(llm_usage_record, dict):
+        for agent in llm_usage_record.get("agents", []):
+            if isinstance(agent, dict) and agent.get("model"):
+                models.append(str(agent["model"]))
+    models = sorted(set(models))
     return HistoryRun(
         selection_id=0,
         run_id=clean_terminal_text(record.get("run_id"), maximum=200) or None,
@@ -1166,6 +1174,7 @@ def build_history_run(config: dict[str, Any], run_dir: Path) -> HistoryRun | Non
         or run_dir.name,
         run_dir=str(run_dir),
         run_dir_relative=run_dir_relative,
+        models=models,
         profile=profile,
         profile_source=profile_source,
         profile_candidates=profile_candidates,
@@ -1739,32 +1748,42 @@ def print_history_runs(runs: Sequence[HistoryRun], *, details: bool) -> None:
         len("Run Dir"),
         *(len(run.run_dir_relative) for run in runs),
     )
+    model_width = max(
+        len("Model"),
+        *(len(", ".join(run.models)) if run.models else len("No observable")
+            for run in runs),
+    )
     print(f"{'ID':>{id_width + 2}} ", end="")
     print(
         f"{'Fecha':<25}  {'Aplicaci�n':<{profile_width}}  "
         f"{'Estado':<{status_width}}  Hallazgos  Agentes  Skills  "
-        f"{'Run Dir':<{run_dir_width}}"
+        f"{'Run Dir':<{run_dir_width}}  {'Model':<{model_width}}"
     )
     print(f"{'-' * (id_width + 2)} ", end="")
     print(
         f"{'-' * 25}  {'-' * profile_width}  {'-' * status_width}  "
-        f"---------  -------  ------  {'-' * run_dir_width}"
+        f"---------  -------  ------  {'-' * run_dir_width}  {'-' * model_width}"
     )
     for run in runs:
         finding_text = "?" if run.findings is None else str(run.findings)
         skills = sum(len(agent.skills) for agent in run.agents)
+        model_text = ", ".join(run.models) if run.models else "No observable"
         print(
             f"[{run.selection_id:>{id_width}}] "
             f"{(run.start_time or '-')[:25]:<25}  "
             f"{history_profile_label(run):<{profile_width}}  "
             f"{run.status:<{status_width}}  {finding_text:>9}  "
             f"{len(run.agents):>7}  {skills:>6}  "
-            f"{run.run_dir_relative:<{run_dir_width}}"
+            f"{run.run_dir_relative:<{run_dir_width}}  "
+            f"{model_text:<{model_width}}"
         )
         if not details:
             continue
         print(f"  ID: {run.selection_id} | Run: {run.run_id or run.run_name}")
         print(f"  Run Dir: {run.run_dir_relative}")
+        print(
+            f"  Model: {', '.join(run.models) if run.models else 'No observable'}"
+        )
         print(
             f"  Asociaci�n: {run.profile_source} | "
             f"Comando: {run.command_source}"
@@ -1845,7 +1864,7 @@ function addField(parent,title,value){const box=el('div','box');box.append(el('h
 function renderRun(run){
   const details=el('details','run');const summary=el('summary');
   summary.append(el('strong','',`#${run.selection_id} - ${run.start_time||'Fecha no observable'}`),el('span','',run.profile||run.profile_candidates.join(', ')||'Sin asociar'),el('span','',run.status),el('span','optional',`${run.findings??'?'} hallazgos`),el('span','optional',`${run.agents.length} agentes`),el('span','optional',`${run.agents.reduce((n,a)=>n+a.skills.length,0)} skills`));details.append(summary);
-  const body=el('div','detail');const overview=el('div','grid');addField(overview,'Run',run.run_id||run.run_name);addField(overview,'Run Dir',run.run_dir_relative);addField(overview,'Asociaci�n',run.profile_source);addField(overview,'Duraci�n',run.duration_seconds==null?'No observable':`${Math.round(run.duration_seconds)} s`);addField(overview,'Tokens',formatNumber(run.llm_usage.total_tokens));body.append(overview);
+  const body=el('div','detail');const overview=el('div','grid');addField(overview,'Run',run.run_id||run.run_name);addField(overview,'Run Dir',run.run_dir_relative);addField(overview,'Model',run.models.length?run.models.join(', '):'No observable');addField(overview,'Asociaci�n',run.profile_source);addField(overview,'Duraci�n',run.duration_seconds==null?'No observable':`${Math.round(run.duration_seconds)} s`);addField(overview,'Tokens',formatNumber(run.llm_usage.total_tokens));body.append(overview);
   const command=el('div','box');command.append(el('h3','',`Comando · ${run.command_source}`),el('pre','',run.command_display));if(run.command_gaps.length)command.append(el('div','muted',`No observable: ${run.command_gaps.join(', ')}`));body.append(command);
   if(run.report_uri){const report=el('a','', 'Abrir informe de penetraci�n');report.href=run.report_uri;report.rel='noopener';body.append(report)}
   const agents=el('div','grid');run.agents.forEach(agent=>{const box=el('section','box');box.append(el('h3','',`${agent.name}${agent.status?' · '+agent.status:''}`));if(agent.task)box.append(el('p','',agent.task));if(!agent.skills.length)box.append(el('span','muted','Sin skills registradas'));agent.skills.forEach(skill=>{const row=el('div');row.append(badge(`${skill.name}: ${skill.utility==='not_observable'?'No observable':skill.utility}`,skill.utility));if(skill.reason)row.append(el('span','muted',skill.reason));box.append(row)});agents.append(box)});body.append(agents);details.append(body);return details;
