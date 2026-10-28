@@ -4,7 +4,7 @@ import os
 import stat
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
@@ -1005,7 +1005,7 @@ class StrixRunnerTests(unittest.TestCase):
         with redirect_stdout(output):
             status = strix_runner.main(["version"])
         self.assertEqual(status, 0)
-        self.assertEqual(output.getvalue().strip(), "strix-runner 1.11.0")
+        self.assertEqual(output.getvalue().strip(), "strix-runner 1.13.0")
 
     def test_version_option(self):
         output = io.StringIO()
@@ -1013,7 +1013,7 @@ class StrixRunnerTests(unittest.TestCase):
             with redirect_stdout(output):
                 strix_runner.main(["--version"])
         self.assertEqual(raised.exception.code, 0)
-        self.assertEqual(output.getvalue().strip(), "strix-runner 1.11.0")
+        self.assertEqual(output.getvalue().strip(), "strix-runner 1.13.0")
 
     def test_verify_json_only_does_not_require_existing_paths(self):
         path = self.base / "config.json"
@@ -1611,6 +1611,63 @@ class StrixRunnerTests(unittest.TestCase):
         self.assertEqual(resumed.selector, "3")
         self.assertTrue(resumed.dry_run)
         self.assertTrue(resumed.non_interactive)
+
+    def test_parser_accepts_dashboard_options(self):
+        parsed = strix_runner.make_parser().parse_args(
+            ["dashboard", "--host", "0.0.0.0", "--port", "9000"]
+        )
+        self.assertEqual(parsed.host, "0.0.0.0")
+        self.assertEqual(parsed.port, 9000)
+        self.assertIs(parsed.handler, strix_runner.run_dashboard)
+
+    @mock.patch("strix_runner.shutil.which", return_value=None)
+    def test_dashboard_reports_missing_installation(self, _which):
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+        args = SimpleNamespace(
+            config=config_path,
+            host="127.0.0.1",
+            port=8080,
+        )
+
+        output = io.StringIO()
+        with redirect_stderr(output):
+            status = strix_runner.run_dashboard(args)
+
+        self.assertEqual(status, 1)
+        self.assertIn("no está instalado", output.getvalue())
+        self.assertIn("sudo apt-get install strix-runner-dashboard", output.getvalue())
+
+    @mock.patch("strix_runner.subprocess.run")
+    @mock.patch("strix_runner.shutil.which", return_value="/usr/bin/strix-dashboard")
+    def test_dashboard_launches_dashboard_binary(self, _which, run):
+        run.return_value = SimpleNamespace(returncode=0)
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+        args = SimpleNamespace(
+            config=config_path,
+            host="127.0.0.1",
+            port=8080,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = strix_runner.run_dashboard(args)
+
+        self.assertEqual(status, 0)
+        run.assert_called_once_with(
+            [
+                "/usr/bin/strix-dashboard",
+                "--config",
+                str(config_path),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8080",
+            ],
+            check=False,
+        )
+        self.assertIn("http://127.0.0.1:8080", output.getvalue())
 
 
 if __name__ == "__main__":
