@@ -1,16 +1,16 @@
 Package: strix-runner
 Architecture: amd64
-Version: 1.11.0
+Version: 1.12.0
 Priority: optional
 Section: utils
 Maintainer: Mikehenrytech <12794741+Mikehenrytech@users.noreply.github.com>
 Depends: python3 (>= 3.10)
-Filename: pool/main/s/strix-runner/strix-runner_1.11.0_amd64.deb
-Size: 25666
-MD5sum: c7149be52d8b97cc84ea0eee81cb402d
-SHA1: 5ce95cac5383d223ff4a2df50018df4bd3ade54a
-SHA256: dc432fe24c9522b24c979439afa810a5f0f15887d0ad16a8ac42b9d727f83cdb
-SHA512: d938d392c28f67c6719714217200f8b52f0d6dd6dbbd07f329cabdc8ecb098e4bebfc025a6ab02cb186e6304ba1b3a92e156e3816e5ffb4feb702d8a68593917
+Filename: pool/main/s/strix-runner/strix-runner_1.12.0_amd64.deb
+Size: 25920
+MD5sum: 9e16ef226f13980d4e157612e8fb28bb
+SHA1: 2d72360daa4ac916558bbce6700171e7cd20d0fd
+SHA256: 7b198d1f991de44ad0842dcbd8d72112d1ba1435be2f4ba3d962088253ac12ff
+SHA512: 550678906ebccce1d49bdd0d18a4c05f14bfc3cf57a682eb513e32400608e85e53af22cb2b8dc8afacafd6fdefdb28e72ba076c7f41e6349fd571b98496531ee
 Description: Profile-based launcher for Strix pentests
  Strix Runner is a profile-based CLI for launching authorized Strix
  pentests. It stores global paths and named application profiles in JSON,
