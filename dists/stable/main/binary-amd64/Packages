@@ -1,19 +1,19 @@
-Package: strix-runner
+Package: strix-runner-dashboard
 Architecture: amd64
-Version: 1.13.0
+Version: 0.2.0
 Priority: optional
 Section: utils
 Maintainer: Mikehenrytech <12794741+Mikehenrytech@users.noreply.github.com>
 Depends: python3 (>= 3.10)
-Suggests: strix-runner-dashboard
-Filename: pool/main/s/strix-runner/strix-runner_1.13.0_amd64.deb
-Size: 26274
-MD5sum: 0edba4bc05bfd4ac6a3c448d59de52f2
-SHA1: 49bfebf560c185574aa0ab6eb62273cbf6aefcfb
-SHA256: 36540051d2f7a6a2fde5536a5cdca56d416f64bee417c23bb7485cd2139c673d
-SHA512: a9d2a29241659f355f1e4896c2ce6058b5bc36ce8d268f2d46abcde00902e6dad1cfbdffab29b3ac8c4286f040e815e3fb75afc585bd5defab77eaaf1030ba29
-Description: Profile-based launcher for Strix pentests
- Strix Runner is a profile-based CLI for launching authorized Strix
- pentests. It stores global paths and named application profiles in JSON,
- validates them, and runs Strix commands without invoking a shell.
+Suggests: strix-runner
+Filename: pool/main/s/strix-runner-dashboard/strix-runner-dashboard_0.2.0-1_amd64.deb
+Size: 12039882
+MD5sum: abc3a4ebd0fe92261ab13caaddc15f44
+SHA1: dec3609f354dafcecbaca26b0d9349d9e10e0fa8
+SHA256: 717763a905400c93080f56617239f745838597adf19f0a7a726b8c1464f200da
+SHA512: 300b697939e9f678067ab585c754b803cb9c289d18c05c07ebd36d76762ca95dc1685291e15519321fced75e41f45f7aff1559d74af17a4a75a259e5d277fd6e
+Description: Read-only web dashboard for Strix execution history
+ Strix Runner Dashboard is a local read-only web interface for browsing
+ Strix execution history. It requires strix-runner to generate the
+ underlying history data.
 
