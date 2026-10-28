@@ -1285,7 +1285,7 @@ class StrixRunnerTests(unittest.TestCase):
         runs = strix_runner.collect_history_runs(self.config, profile="app")
         self.assertEqual(len(runs), 1)
         self.assertEqual(runs[0].run_dir, str(run_dir))
-        self.assertEqual(runs[0].run_dir_relative, "example-run")
+        self.assertEqual(runs[0].run_dir_relative, "strix_runs/example-run")
 
     def test_history_filters_dates_and_marks_reconstructed_command(self):
         self.write_strix_run(targets=["https://example.test/app"])

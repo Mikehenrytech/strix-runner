@@ -1155,9 +1155,8 @@ def build_history_run(config: dict[str, Any], run_dir: Path) -> HistoryRun | Non
             date_source = "not_observable"
     report_path = run_dir / "penetration_test_report.md"
     _, path_strix = require_global_paths(config)
-    root = strix_runs_root(path_strix)
     try:
-        run_dir_relative = str(run_dir.relative_to(root))
+        run_dir_relative = str(run_dir.relative_to(path_strix))
     except ValueError:
         run_dir_relative = run_dir.name
     return HistoryRun(
@@ -1736,15 +1735,20 @@ def print_history_runs(runs: Sequence[HistoryRun], *, details: bool) -> None:
     )
     id_width = max(len("ID"), len(str(len(runs))))
     status_width = max(len("Estado"), *(len(run.status) for run in runs))
+    run_dir_width = max(
+        len("Run Dir"),
+        *(len(run.run_dir_relative) for run in runs),
+    )
     print(f"{'ID':>{id_width + 2}} ", end="")
     print(
         f"{'Fecha':<25}  {'Aplicaci�n':<{profile_width}}  "
-        f"{'Estado':<{status_width}}  Hallazgos  Agentes  Skills"
+        f"{'Estado':<{status_width}}  Hallazgos  Agentes  Skills  "
+        f"{'Run Dir':<{run_dir_width}}"
     )
     print(f"{'-' * (id_width + 2)} ", end="")
     print(
         f"{'-' * 25}  {'-' * profile_width}  {'-' * status_width}  "
-        "---------  -------  ------"
+        f"---------  -------  ------  {'-' * run_dir_width}"
     )
     for run in runs:
         finding_text = "?" if run.findings is None else str(run.findings)
@@ -1754,7 +1758,8 @@ def print_history_runs(runs: Sequence[HistoryRun], *, details: bool) -> None:
             f"{(run.start_time or '-')[:25]:<25}  "
             f"{history_profile_label(run):<{profile_width}}  "
             f"{run.status:<{status_width}}  {finding_text:>9}  "
-            f"{len(run.agents):>7}  {skills:>6}"
+            f"{len(run.agents):>7}  {skills:>6}  "
+            f"{run.run_dir_relative:<{run_dir_width}}"
         )
         if not details:
             continue
