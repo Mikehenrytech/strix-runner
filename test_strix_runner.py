@@ -1005,7 +1005,7 @@ class StrixRunnerTests(unittest.TestCase):
         with redirect_stdout(output):
             status = strix_runner.main(["version"])
         self.assertEqual(status, 0)
-        self.assertEqual(output.getvalue().strip(), "strix-runner 1.13.0")
+        self.assertEqual(output.getvalue().strip(), "strix-runner 1.14.0")
 
     def test_version_option(self):
         output = io.StringIO()
@@ -1013,7 +1013,7 @@ class StrixRunnerTests(unittest.TestCase):
             with redirect_stdout(output):
                 strix_runner.main(["--version"])
         self.assertEqual(raised.exception.code, 0)
-        self.assertEqual(output.getvalue().strip(), "strix-runner 1.13.0")
+        self.assertEqual(output.getvalue().strip(), "strix-runner 1.14.0")
 
     def test_verify_json_only_does_not_require_existing_paths(self):
         path = self.base / "config.json"
@@ -1564,6 +1564,8 @@ class StrixRunnerTests(unittest.TestCase):
             config=config_path,
             selector="1",
             non_interactive=False,
+            instruction_file=None,
+            additional_instruction_file=None,
             dry_run=False,
         )
 
@@ -1586,6 +1588,8 @@ class StrixRunnerTests(unittest.TestCase):
             config=config_path,
             selector="example-run",
             non_interactive=True,
+            instruction_file=None,
+            additional_instruction_file=None,
             dry_run=True,
         )
 
@@ -1668,6 +1672,141 @@ class StrixRunnerTests(unittest.TestCase):
             check=False,
         )
         self.assertIn("http://127.0.0.1:8080", output.getvalue())
+
+    @mock.patch("strix_runner.subprocess.run")
+    def test_resume_does_not_repeat_profile_instruction_file(self, run):
+        run_dir, record = self.write_strix_run()
+        record["profile"] = "app"
+        record["profile_source"] = "configured"
+        (run_dir / "run.json").write_text(
+            json.dumps(record), encoding="utf-8"
+        )
+        self.write_resume_state(run_dir)
+        instruction = self.base / "instructions.md"
+        instruction.write_text("# Base", encoding="utf-8")
+        self.config["applications"]["app"]["instruction_file"] = str(
+            instruction.relative_to(self.base)
+        )
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = strix_runner.resume_run(
+                SimpleNamespace(
+                    config=config_path,
+                    selector="1",
+                    non_interactive=True,
+                    instruction_file=None,
+                    additional_instruction_file=None,
+                    dry_run=True,
+                )
+            )
+
+        self.assertEqual(status, 0)
+        run.assert_not_called()
+        command_line = output.getvalue()
+        self.assertIn("--resume", command_line)
+        self.assertNotIn("--instruction-file", command_line)
+
+    @mock.patch("strix_runner.subprocess.run")
+    def test_resume_instruction_file_overrides_profile(self, run):
+        run_dir, record = self.write_strix_run()
+        record["profile"] = "app"
+        record["profile_source"] = "configured"
+        (run_dir / "run.json").write_text(
+            json.dumps(record), encoding="utf-8"
+        )
+        self.write_resume_state(run_dir)
+        profile_instruction = self.base / "profile_instructions.md"
+        profile_instruction.write_text("# Profile", encoding="utf-8")
+        override_instruction = self.base / "override_instructions.md"
+        override_instruction.write_text("# Override", encoding="utf-8")
+        self.config["applications"]["app"]["instruction_file"] = str(
+            profile_instruction.relative_to(self.base)
+        )
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = strix_runner.resume_run(
+                SimpleNamespace(
+                    config=config_path,
+                    selector="1",
+                    non_interactive=True,
+                    instruction_file=override_instruction,
+                    additional_instruction_file=None,
+                    dry_run=True,
+                )
+            )
+
+        self.assertEqual(status, 0)
+        run.assert_not_called()
+        self.assertIn(str(override_instruction), output.getvalue())
+        self.assertNotIn(str(profile_instruction), output.getvalue())
+
+    @mock.patch("strix_runner.subprocess.run")
+    def test_resume_additional_instruction_file_combines_with_profile(self, run):
+        run_dir, record = self.write_strix_run()
+        record["profile"] = "app"
+        record["profile_source"] = "configured"
+        (run_dir / "run.json").write_text(
+            json.dumps(record), encoding="utf-8"
+        )
+        self.write_resume_state(run_dir)
+        profile_instruction = self.base / "profile_instructions.md"
+        profile_instruction.write_text("# Profile", encoding="utf-8")
+        additional_instruction = self.base / "additional_instructions.md"
+        additional_instruction.write_text("# Additional", encoding="utf-8")
+        self.config["applications"]["app"]["instruction_file"] = str(
+            profile_instruction.relative_to(self.base)
+        )
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            status = strix_runner.resume_run(
+                SimpleNamespace(
+                    config=config_path,
+                    selector="1",
+                    non_interactive=True,
+                    instruction_file=None,
+                    additional_instruction_file=additional_instruction,
+                    dry_run=True,
+                )
+            )
+
+        self.assertEqual(status, 0)
+        run.assert_not_called()
+        command_line = output.getvalue()
+        self.assertIn("--resume", command_line)
+        self.assertIn("--instruction-file", command_line)
+
+    def test_resume_rejects_missing_instruction_file(self):
+        run_dir, record = self.write_strix_run()
+        record["profile"] = "app"
+        record["profile_source"] = "configured"
+        (run_dir / "run.json").write_text(
+            json.dumps(record), encoding="utf-8"
+        )
+        self.write_resume_state(run_dir)
+        missing = self.base / "missing.md"
+        config_path = self.base / "config.json"
+        strix_runner.save_config(config_path, self.config)
+
+        with self.assertRaises(strix_runner.UserError):
+            strix_runner.resume_run(
+                SimpleNamespace(
+                    config=config_path,
+                    selector="1",
+                    non_interactive=True,
+                    instruction_file=missing,
+                    additional_instruction_file=None,
+                    dry_run=True,
+                )
+            )
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 DEFAULT_INSTRUCTION_FILE = "Instrucciones/Web_Application_Security_Assessment.md"
 DEFAULT_WORKSPACE_FILES = ["token.json"]
 DEFAULT_SCAN_MODE = "deep"
-__version__ = "1.13.0"
+__version__ = "1.14.0"
 DEFAULT_LOG_DIR = (
     Path(os.environ.get("XDG_STATE_HOME", "~/.local/state")).expanduser()
     / "strix-runner"
@@ -2032,20 +2032,14 @@ def run_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
-def resume_run(args: argparse.Namespace) -> int:
-    """List resumable sessions or restore one through Strix's native CLI."""
-    config = load_config(args.config)
-    if args.selector == "list":
-        print_resumable_runs(resumable_history_runs(config))
-        return 0
-
-    _, path_strix = require_global_paths(config)
-    run = resolve_resume_run(config, args.selector)
-    run_name = Path(run.run_dir).name
-    command = ["uv", "run", "strix"]
-    if args.non_interactive:
-        command.append("--non-interactive")
-    command.extend(["--resume", run_name])
+def _execute_resume_command(
+    command: list[str],
+    path_strix: Path,
+    run: HistoryRun,
+    run_name: str,
+    args: argparse.Namespace,
+) -> int:
+    """Print and execute a prepared Strix resume command."""
     print(
         f"Reanudando [{run.selection_id}] {run_name} "
         f"({history_profile_label(run)})"
@@ -2064,6 +2058,51 @@ def resume_run(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     return result.returncode
+
+
+def resume_run(args: argparse.Namespace) -> int:
+    """List resumable sessions or restore one through Strix's native CLI."""
+    config = load_config(args.config)
+    if args.selector == "list":
+        print_resumable_runs(resumable_history_runs(config))
+        return 0
+
+    path_base, path_strix = require_global_paths(config)
+    run = resolve_resume_run(config, args.selector)
+    run_name = Path(run.run_dir).name
+    command = ["uv", "run", "strix"]
+    if args.non_interactive:
+        command.append("--non-interactive")
+
+    profile_instruction_file: Path | None = None
+    if run.profile and run.profile in config.get("applications", {}):
+        configured = config["applications"][run.profile].get("instruction_file")
+        if configured:
+            profile_instruction_file = resolve_from(path_base, configured)
+
+    user_instruction_file: Path | None = None
+    if args.instruction_file is not None:
+        user_instruction_file = args.instruction_file.expanduser()
+        if not user_instruction_file.is_file():
+            raise UserError(
+                f"No existe el archivo de instrucciones: {user_instruction_file}"
+            )
+        command.extend(["--instruction-file", str(user_instruction_file)])
+    elif profile_instruction_file is not None and args.additional_instruction_file is not None:
+        command.extend(["--instruction-file", str(profile_instruction_file)])
+
+    command.extend(["--resume", run_name])
+
+    if args.additional_instruction_file is not None:
+        additional_path = args.additional_instruction_file.expanduser()
+        if not additional_path.is_file():
+            raise UserError(
+                f"No existe el archivo de instrucciones adicionales: {additional_path}"
+            )
+        with command_with_additional_instruction(command, additional_path) as effective_command:
+            return _execute_resume_command(effective_command, path_strix, run, run_name, args)
+
+    return _execute_resume_command(command, path_strix, run, run_name, args)
 
 
 def save_execution_summary(
@@ -2886,6 +2925,16 @@ Las rutas relativas se resuelven respecto a PATH_BASE.
         "--non-interactive",
         action="store_true",
         help="Reanuda sin interfaz interactiva",
+    )
+    resume_parser.add_argument(
+        "--instruction-file",
+        type=Path,
+        help="Sobrescribe el archivo de instrucciones del perfil",
+    )
+    resume_parser.add_argument(
+        "--additional-instruction-file",
+        type=Path,
+        help="Añade instrucciones adicionales al archivo de instrucciones del perfil",
     )
     resume_parser.add_argument(
         "--dry-run",

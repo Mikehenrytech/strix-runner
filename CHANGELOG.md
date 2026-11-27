@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. This project follows semantic versioning.
 
+## 1.14.0
+
+- Add `--instruction-file` to `resume` for overriding the profile instruction file.
+- Add `--additional-instruction-file` to `resume` for appending instructions in non-interactive mode.
+
 ## 1.13.0
 
 - Add `dashboard` subcommand to launch `strix-runner-dashboard` when installed.
