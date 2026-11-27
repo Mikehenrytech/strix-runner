@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 DEFAULT_INSTRUCTION_FILE = "Instrucciones/Web_Application_Security_Assessment.md"
 DEFAULT_WORKSPACE_FILES = ["token.json"]
 DEFAULT_SCAN_MODE = "deep"
-__version__ = "1.14.0"
+__version__ = "1.15.0"
 DEFAULT_LOG_DIR = (
     Path(os.environ.get("XDG_STATE_HOME", "~/.local/state")).expanduser()
     / "strix-runner"
@@ -2032,6 +2032,21 @@ def run_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _write_instruction_temp(text: str) -> Path:
+    """Write instruction text to a private temporary file and return its path."""
+    fd, temporary_name = tempfile.mkstemp(
+        prefix="strix-runner-instructions-",
+        suffix=".md",
+    )
+    temporary_path = Path(temporary_name)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(text)
+        if not text.endswith("\n"):
+            handle.write("\n")
+    os.chmod(temporary_path, 0o600)
+    return temporary_path
+
+
 def _execute_resume_command(
     command: list[str],
     path_strix: Path,
@@ -2080,29 +2095,64 @@ def resume_run(args: argparse.Namespace) -> int:
         if configured:
             profile_instruction_file = resolve_from(path_base, configured)
 
-    user_instruction_file: Path | None = None
+    user_temps: list[Path] = []
+
+    def require_text(value: str | None, label: str) -> str:
+        if value is None:
+            raise UserError(f"{label} requiere un valor.")
+        text = value.strip()
+        if not text:
+            raise UserError(f"{label} no puede estar vacío.")
+        return text
+
     if args.instruction_file is not None:
-        user_instruction_file = args.instruction_file.expanduser()
-        if not user_instruction_file.is_file():
+        instruction_file = args.instruction_file.expanduser()
+        if not instruction_file.is_file():
             raise UserError(
-                f"No existe el archivo de instrucciones: {user_instruction_file}"
+                f"No existe el archivo de instrucciones: {instruction_file}"
             )
-        command.extend(["--instruction-file", str(user_instruction_file)])
-    elif profile_instruction_file is not None and args.additional_instruction_file is not None:
+        command.extend(["--instruction-file", str(instruction_file)])
+    elif args.instruction is not None:
+        instruction_temp = _write_instruction_temp(
+            require_text(args.instruction, "--instruction")
+        )
+        user_temps.append(instruction_temp)
+        command.extend(["--instruction-file", str(instruction_temp)])
+    elif profile_instruction_file is not None and (
+        args.additional_instruction_file is not None
+        or args.additional_instruction is not None
+    ):
         command.extend(["--instruction-file", str(profile_instruction_file)])
 
     command.extend(["--resume", run_name])
 
-    if args.additional_instruction_file is not None:
-        additional_path = args.additional_instruction_file.expanduser()
-        if not additional_path.is_file():
-            raise UserError(
-                f"No existe el archivo de instrucciones adicionales: {additional_path}"
+    if args.additional_instruction_file is not None or args.additional_instruction is not None:
+        if args.additional_instruction_file is not None:
+            additional_path = args.additional_instruction_file.expanduser()
+            if not additional_path.is_file():
+                raise UserError(
+                    f"No existe el archivo de instrucciones adicionales: {additional_path}"
+                )
+        else:
+            additional_temp = _write_instruction_temp(
+                require_text(args.additional_instruction, "--additional-instruction")
             )
-        with command_with_additional_instruction(command, additional_path) as effective_command:
-            return _execute_resume_command(effective_command, path_strix, run, run_name, args)
+            user_temps.append(additional_temp)
+            additional_path = additional_temp
+        try:
+            with command_with_additional_instruction(command, additional_path) as effective_command:
+                return _execute_resume_command(
+                    effective_command, path_strix, run, run_name, args
+                )
+        finally:
+            for temp in user_temps:
+                temp.unlink(missing_ok=True)
 
-    return _execute_resume_command(command, path_strix, run, run_name, args)
+    try:
+        return _execute_resume_command(command, path_strix, run, run_name, args)
+    finally:
+        for temp in user_temps:
+            temp.unlink(missing_ok=True)
 
 
 def save_execution_summary(
@@ -2926,15 +2976,25 @@ Las rutas relativas se resuelven respecto a PATH_BASE.
         action="store_true",
         help="Reanuda sin interfaz interactiva",
     )
-    resume_parser.add_argument(
+    instruction_group = resume_parser.add_mutually_exclusive_group()
+    instruction_group.add_argument(
         "--instruction-file",
         type=Path,
         help="Sobrescribe el archivo de instrucciones del perfil",
     )
-    resume_parser.add_argument(
+    instruction_group.add_argument(
+        "--instruction",
+        help="Sobrescribe las instrucciones del perfil con el texto indicado",
+    )
+    additional_group = resume_parser.add_mutually_exclusive_group()
+    additional_group.add_argument(
         "--additional-instruction-file",
         type=Path,
         help="Añade instrucciones adicionales al archivo de instrucciones del perfil",
+    )
+    additional_group.add_argument(
+        "--additional-instruction",
+        help="Añade el texto indicado como instrucciones adicionales",
     )
     resume_parser.add_argument(
         "--dry-run",
