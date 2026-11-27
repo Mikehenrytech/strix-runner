@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. This project follows semantic versioning.
 
+## 1.15.0
+
+- Add `--instruction` to `resume` for passing instruction text inline.
+- Add `--additional-instruction` to `resume` for appending instruction text inline.
+
 ## 1.14.0
 
 - Add `--instruction-file` to `resume` for overriding the profile instruction file.
